@@ -1,3 +1,5 @@
+// CZESC 1/4
+
 #include <QApplication>
 #include <QWidget>
 #include <QVBoxLayout>
@@ -61,21 +63,7 @@ public:
         topLayout->addWidget(aboutBtn);
         mainLayout->addLayout(topLayout);
 
-        progressBar = new QProgressBar();
-        progressBar->setVisible(false);
-        progressBar->setRange(0, 100);
-        mainLayout->addWidget(progressBar);
-
-        activityTimer = new QTimer(this);
-        connect(activityTimer, &QTimer::timeout, [this]() {
-            QProcess pCPU;
-            pCPU.start("bash", {"-c", "cat /proc/loadavg | awk '{print $1}'"});
-            pCPU.waitForFinished(200);
-            double load = pCPU.readAllStandardOutput().trimmed().toDouble();
-            int threads = qMax(1, QThread::idealThreadCount());
-            int val = qBound(0, static_cast<int>((load / threads) * 100), 100);
-            progressBar->setValue(val);
-        });
+        // Usunąłem stąd pasek postępu oraz Timer!
 
         searchBar = new QLineEdit();
         searchBar->setPlaceholderText("Search packages...");
@@ -122,6 +110,10 @@ public:
         consoleVLayout->setContentsMargins(0,0,0,0);
         consoleVLayout->setSpacing(0);
 
+
+
+// CZESC 2/4
+
         // Panel narzędziowy dla edytora (z przyciskiem SAVE)
         editorTools = new QWidget();
         auto *toolsLayout = new QHBoxLayout(editorTools);
@@ -139,10 +131,42 @@ public:
         consoleOutput->setStyleSheet("background-color: #000; color: #ffffff; font-family: monospace; border: 1px solid #333;");
         consoleVLayout->addWidget(consoleOutput);
 
+        // KONTENER DLA DOLNEGO WEJŚCIA I PASKA
+        auto *bottomInputWrapper = new QWidget();
+        auto *bottomInputLayout = new QHBoxLayout(bottomInputWrapper);
+        bottomInputLayout->setContentsMargins(0,0,0,0);
+        bottomInputLayout->setSpacing(0);
+
         consoleInput = new QLineEdit();
         consoleInput->setPlaceholderText("Type response (e.g. 1, y, n) and press Enter...");
         consoleInput->setStyleSheet("background-color: #050505; color: #00ffcc; border: 1px solid #333; font-family: monospace; padding: 5px; height: 30px;");
-        consoleVLayout->addWidget(consoleInput);
+        bottomInputLayout->addWidget(consoleInput);
+
+        progressBar = new QProgressBar();
+        progressBar->setVisible(false);
+        progressBar->setRange(0, 100);
+        progressBar->setAlignment(Qt::AlignCenter);
+        progressBar->setStyleSheet(
+            "QProgressBar { background-color: #050505; color: #ffffff; border: 1px solid #333; height: 30px; font-family: monospace; font-weight: bold; font-size: 11px; }"
+            "QProgressBar::chunk { background-color: #00ffcc; }"
+        );
+        bottomInputLayout->addWidget(progressBar);
+
+        consoleVLayout->addWidget(bottomInputWrapper);
+
+        // --- TIMER DLA EFEKTU ODDYCHAJĄCEGO PASKA ---
+        pulseTimer = new QTimer(this);
+        pulseAngle = 0.0;
+        connect(pulseTimer, &QTimer::timeout, [this]() {
+            pulseAngle += 0.05; // Prędkość oddychania
+            if (pulseAngle > 2 * 3.14159) pulseAngle = 0;
+
+            // Funkcja sinus tworzy płynne przejście od 0 do 100 i z powrotem
+            double factor = (std::sin(pulseAngle) + 1.0) / 2.0;
+            int val = static_cast<int>(factor * 100);
+            progressBar->setValue(val);
+        });
+        // ---------------------------------------------
 
         splitter->addWidget(consoleWrapper);
         splitter->setStretchFactor(0, 1);
@@ -221,6 +245,8 @@ public:
             }
         });
 
+ // CZESC 3/4
+
         connect(searchBar, &QLineEdit::textChanged, this, &GentooManager::handleSearch);
         connect(syncBtn, &QPushButton::clicked, this, &GentooManager::handleSync);
         connect(globalUpdateBtn, &QPushButton::clicked, [this]() { startEmerge("-avuDU --with-bdeps=y @world"); });
@@ -232,9 +258,20 @@ public:
         connect(pkgList, &QListWidget::customContextMenuRequested, this, &GentooManager::showContextMenu);
         connect(installProcess, &QProcess::readyReadStandardOutput, this, &GentooManager::readInstallOutput);
         connect(installProcess, &QProcess::readyReadStandardError, this, &GentooManager::readInstallOutput);
+
         connect(installProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this](int exitCode) {
-            activityTimer->stop(); progressBar->setVisible(false); if (exitCode == 0) { loadLocalPackages(); checkUpdates(); }
+            // STOPUJEMY ODDYCHANIE
+            pulseTimer->stop();
+            progressBar->setVisible(false);
+            consoleInput->setVisible(true);
+            consoleInput->setFocus();
+
+            if (exitCode == 0) {
+                loadLocalPackages();
+                checkUpdates();
+            }
         });
+
         connect(confirmBtn, &QPushButton::clicked, [this]() { confirmWidget->setVisible(false); installProcess->write("y\n"); });
         connect(cancelBtn, &QPushButton::clicked, [this]() { confirmWidget->setVisible(false); if (installProcess->state() == QProcess::Running) installProcess->write("n\n"); });
 
@@ -245,7 +282,9 @@ public:
 private:
     QString terminal; QListWidget *pkgList; QLineEdit *searchBar; QTextEdit *consoleOutput;
     QLineEdit *consoleInput; QLabel *statsLabel, *selectionLabel, *legendHeader;
-    QProgressBar *progressBar; QTimer *activityTimer;
+    QProgressBar *progressBar;
+    QTimer *pulseTimer; // Nowy timer
+    double pulseAngle;  // Nowa zmienna
     QPushButton *syncBtn, *globalUpdateBtn, *topCleanBtn, *etcUpBtn, *ovlBtn;
     QPushButton *installBtn, *reinstallBtn, *uninstallBtn, *useBtn, *infoBtn, *saveFlagsBtn;
     QPushButton *confirmBtn, *cancelBtn; QWidget *confirmWidget, *legendItemsWidget, *legendContainer, *editorTools;
@@ -272,7 +311,6 @@ private:
         QString pkgAtom = pkgList->currentItem()->text().remove("[UPDATE]").remove("(REPO)").trimmed().split(' ').first().remove(QRegularExpression("-[0-9].*$"));
         QString priorityFile = "/etc/portage/package.use/zzz_portager_use";
 
-        // Dodawanie podpowiedzi (hashe)
         QProcess gF; gF.start("bash", {"-c", QString("eix --pure-packages --exact %1 | grep -o '{.*}' | tr -d '{}'").arg(pkgAtom)});
         gF.waitForFinished();
         QString hT = QString("\n# --- PACKAGE: %1 ---\n").arg(pkgAtom);
@@ -281,7 +319,6 @@ private:
         QProcess c; c.start("grep", {"-q", pkgAtom, priorityFile}); c.waitForFinished();
         if (c.exitCode() != 0) { QProcess a; a.start("bash", {"-c", QString("echo -e \"%1\" | sudo tee -a %2").arg(hT, priorityFile)}); a.waitForFinished(); }
 
-        // Przełączenie w tryb edycji
         QFile file(priorityFile);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             consoleOutput->setReadOnly(false);
@@ -309,7 +346,8 @@ private:
 
     void handleSecureRemove() {
         auto sel = pkgList->selectedItems(); if (sel.isEmpty()) return;
-        QString pkgs = ""; for (auto *it : sel) pkgs += it->text().split(' ').first() + "\n";
+        QString pkgs = "";
+        for (auto *it : sel) pkgs += it->text().split(' ').first() + "\n";
         QMessageBox warn; warn.setWindowTitle("CRITICAL WARNING"); warn.setIcon(QMessageBox::Critical);
         warn.setText("<b style='color:red;'>ARE YOU ABSOLUTELY SURE?</b>");
         warn.setInformativeText("You are about to UNMERGE (force remove):\n\n" + pkgs + "\nThis can BROKE YOUR SYSTEM!");
@@ -336,6 +374,8 @@ private:
             }
         } else { handleSearch(searchBar->text()); }
     }
+
+// CZESC 4/4
 
     void handleOverlayAction() {
         auto sel = pkgList->selectedItems(); if (sel.isEmpty()) return;
@@ -373,30 +413,122 @@ private:
         }
         pkgList->setUpdatesEnabled(true);
     }
+
     void refreshList(const QStringList &l) {
         for (const QString &p : l) {
-            bool u = false; for (const QString &up : updatablePkgs) if (p.contains(up.trimmed())) u = true;
-            if (u) { auto *it = new QListWidgetItem(p + " [UPDATE]"); it->setForeground(QColor("#00ff00")); it->setData(Qt::UserRole, 888); pkgList->addItem(it); }
+            bool u = false;
+            for (const QString &up : updatablePkgs) {
+                QString pClean = p;
+                pClean = pClean.remove(QRegularExpression("-[0-9].*$"));
+                if (pClean == up.trimmed()) { u = true; break; }
+            }
+            if (u) {
+                auto *it = new QListWidgetItem(p + " [UPDATE]");
+                it->setForeground(QColor("#00ff00"));
+                it->setData(Qt::UserRole, 888);
+                pkgList->addItem(it);
+            }
         }
+
         for (const QString &p : l) {
-            bool u = false; for (const QString &up : updatablePkgs) if (p.contains(up.trimmed())) u = true;
-            if (!u) { auto *it = new QListWidgetItem(p); it->setForeground(QColor("#eeeeee")); it->setData(Qt::UserRole, 0); pkgList->addItem(it); }
+            bool u = false;
+            for (const QString &up : updatablePkgs) {
+                QString pClean = p;
+                pClean = pClean.remove(QRegularExpression("-[0-9].*$"));
+                if (pClean == up.trimmed()) { u = true; break; }
+            }
+            if (!u) {
+                auto *it = new QListWidgetItem(p);
+                it->setForeground(QColor("#eeeeee"));
+                it->setData(Qt::UserRole, 0);
+                pkgList->addItem(it);
+            }
         }
     }
+
     void checkUpdates() {
         globalUpdateBtn->setEnabled(false);
+        topCleanBtn->setEnabled(false);
+        updatablePkgs.clear();
+
+        QString repoPath = "/var/db/repos/gentoo/metadata/timestamp.chk";
+        if (!QFile::exists(repoPath)) repoPath = "/var/db/repos/gentoo/.git";
+
+        QFileInfo repoInfo(repoPath);
+        if (repoInfo.exists()) {
+            qint64 diffSecs = repoInfo.lastModified().secsTo(QDateTime::currentDateTime());
+            qint64 diffHours = diffSecs / 3600;
+            consoleOutput->append(QString("<b style='color:#00ffcc;'>[System] Last sync was %1 hours ago.</b>").arg(diffHours));
+            if (diffHours < 3) {
+                consoleOutput->append("<b style='color:#a8a8a8;'>[System] Skipping auto-sync (less than 3 hours since last sync). Use manual 'Sync' to override.</b>");
+            }
+        }
+
+        consoleOutput->append("<b style='color:#ffff00;'>[System] Fast-checking updates via EIX...</b>");
+
+        QProcess eixProc;
+        eixProc.start("eix", {"--upgrade", "--pure-packages", "--format", "<category>/<name>\n"});
+        eixProc.waitForFinished();
+        updatablePkgs = QString::fromLocal8Bit(eixProc.readAllStandardOutput()).split('\n', Qt::SkipEmptyParts);
+
+        if (!updatablePkgs.isEmpty()) {
+            globalUpdateBtn->setToolTip(QString("EIX Updates: %1").arg(updatablePkgs.size()));
+        }
+        handleSearch(searchBar->text());
+
+        consoleOutput->append("<b style='color:#fb8c00;'>[System] Deep dependency scanning via Emerge in background. Please wait...</b>");
+
         QProcess *p = new QProcess(this);
         connect(p, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this, p]() {
-            updatablePkgs = QString::fromLocal8Bit(p->readAllStandardOutput()).split('\n', Qt::SkipEmptyParts);
-            if (!updatablePkgs.isEmpty()) { globalUpdateBtn->setEnabled(true); globalUpdateBtn->setToolTip(QString("Updates: %1").arg(updatablePkgs.size())); }
-            handleSearch(searchBar->text()); p->deleteLater();
+            QString output = QString::fromLocal8Bit(p->readAllStandardOutput());
+            QStringList lines = output.split('\n', Qt::SkipEmptyParts);
+
+            updatablePkgs.clear();
+
+            QRegularExpression updateRegex("^\\[ebuild\\s+U.*?\\].*?([^\\s]+)");
+            for (const QString &line : lines) {
+                QRegularExpressionMatch match = updateRegex.match(line.trimmed());
+                if (match.hasMatch()) {
+                    QString pkgFull = match.captured(1);
+                    QString pkgClean = pkgFull.remove(QRegularExpression("-[0-9].*$"));
+                    updatablePkgs.append(pkgClean);
+                }
+            }
+
+            if (!updatablePkgs.isEmpty()) {
+                globalUpdateBtn->setEnabled(true);
+                globalUpdateBtn->setToolTip(QString("Real Updates: %1").arg(updatablePkgs.size()));
+            } else {
+                globalUpdateBtn->setEnabled(false);
+            }
+
+            topCleanBtn->setEnabled(true);
+
+            consoleOutput->append("<b style='color:#00ff00;'>[System] Deep scan complete. App is ready for use.</b>");
+
+            handleSearch(searchBar->text());
+            p->deleteLater();
         });
-        p->start("eix", {"--newer", "--pure-packages", "--format", "<category>/<name>\n"});
+
+        p->start("emerge", {"-p", "--color=n", "--deep", "--with-bdeps=y", "@world"});
     }
+
     void handleSync() {
-        syncBtn->setEnabled(false); consoleOutput->clear(); progressBar->setVisible(true); activityTimer->start(1000);
+        syncBtn->setEnabled(false);
+        consoleOutput->clear();
+
+        consoleInput->setVisible(false);
+        progressBar->setVisible(true);
+
+        // ODPALAMY ODDYCHANIE
+        pulseAngle = 0.0;
+        pulseTimer->start(20); // Aktualizacja co 20 ms dla płynności
+
+        consoleOutput->append("<b style='color:#00ffcc;'>[System] Forcing manual sync...</b>");
+
         installProcess->start("script", {"-q", "-c", "sudo emaint sync -a && sudo eix-update", "/dev/null"});
     }
+
     void startEmerge(QString f) {
         QString p = "";
         if (!f.contains("@world") && !f.contains("--depclean")) {
@@ -404,20 +536,50 @@ private:
             QStringList ns; for (auto *it : sel) ns << it->text().remove("[UPDATE]").remove("(REPO)").trimmed().split(' ').first().remove(QRegularExpression("-[0-9].*$"));
             p = ns.join(" ");
         }
-        consoleOutput->clear(); confirmWidget->setVisible(false); progressBar->setVisible(true); activityTimer->start(1000);
-        installProcess->start("script", {"-q", "-c", "sudo emerge --color=y " + f + " " + p, "/dev/null"});
+
+        consoleOutput->clear(); confirmWidget->setVisible(false);
+
+        consoleInput->setVisible(false);
+        progressBar->setVisible(true);
+
+        // ODPALAMY ODDYCHANIE
+        pulseAngle = 0.0;
+        pulseTimer->start(20); // Aktualizacja co 20 ms dla płynności
+
+        QString autoUnmaskFlags = "--autounmask=y --autounmask-write=y --autounmask-continue=y";
+
+        installProcess->start("script", {"-q", "-c", "sudo emerge --color=y " + autoUnmaskFlags + " " + f + " " + p, "/dev/null"});
     }
+
     void readInstallOutput() {
         QByteArray d = installProcess->readAllStandardOutput() + installProcess->readAllStandardError();
         QString t = QString::fromLocal8Bit(d);
+
+        if (t.contains("Autounmask changes successfully written") || t.contains("needs updating")) {
+            consoleOutput->append("<br><b style='color:#00ffcc;'>[Automation] Config files need updating. Auto-merging now...</b>");
+
+            QProcess unmaskProc;
+            unmaskProc.start("bash", {"-c", "sudo etc-update --automode -5"});
+            unmaskProc.waitForFinished();
+
+            consoleOutput->append("<b style='color:#00ff00;'>[Automation] Configs merged! Process will resume automatically.</b>");
+        }
+
         t.replace(QRegularExpression("\x1B\\][0-9];.*?\x07|\x1B\\[[0-9;]*[a-zA-Z]"), "");
         t.remove('\r').replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
         t.replace(QRegularExpression("(\\s-\\w+)"), "<span style='color:#ff5555;'>\\1</span>");
         t.replace(QRegularExpression("(\\+\\w+)"), "<span style='color:#00ff00;'>\\1</span>");
         consoleOutput->moveCursor(QTextCursor::End); consoleOutput->insertHtml(t.replace("\n", "<br>"));
-        if (t.contains("[Yes/No]")) { confirmWidget->setVisible(true); activityTimer->stop(); }
+
+        if (t.contains("[Yes/No]")) {
+            confirmWidget->setVisible(true);
+            // Na czas decyzji stopujemy oddychanie i wypełniamy pasek
+            pulseTimer->stop();
+            progressBar->setValue(100);
+        }
         consoleOutput->ensureCursorVisible();
     }
+
     void handleInfo() {
         auto sel = pkgList->selectedItems(); if (sel.isEmpty()) return;
         QString pP = sel.first()->text().remove("[UPDATE]").remove("(REPO)").trimmed().split(' ').first().remove(QRegularExpression("-[0-9].*$"));
@@ -434,6 +596,7 @@ private:
         QProcess jP; jP.start("bash", {"-c", QString("journalctl -xe --since '24h ago' --no-pager | grep -i '%1' | tail -n 5").arg(pO)}); jP.waitForFinished();
         consoleOutput->append(QString::fromLocal8Bit(jP.readAllStandardOutput()).trimmed());
     }
+
     void showContextMenu(const QPoint &pos) {
         auto sel = pkgList->selectedItems(); if (sel.isEmpty()) return;
         QMenu m(this); m.setStyleSheet("QMenu { background:#222; color:#fff; } QMenu::item:selected { background:#00ffcc; color:#000; }");
@@ -443,6 +606,8 @@ private:
             else m.addAction("✅ Enable & Sync", [this]() { handleOverlayAction(); });
         } else {
             int t = sel.first()->data(Qt::UserRole).toInt();
+            QString pClean = sel.first()->text().remove("[UPDATE]").remove("(REPO)").trimmed().split(' ').first().remove(QRegularExpression("-[0-9].*$"));
+
             if (t == 999) m.addAction("➕ Install", [this]() { startEmerge("-av"); });
             else {
                 if (t == 888) m.addAction("🚀 Upgrade", [this]() { startEmerge("-avuND"); });
@@ -450,7 +615,17 @@ private:
                 m.addSeparator();
                 m.addAction("🗑️ Remove (Dangerous)", [this]() { handleSecureRemove(); });
             }
-            m.addSeparator(); m.addAction("🔍 Inspect", [this]() { handleInfo(); }); m.addAction("⚙️ UseFlags", [this]() { handleUseEdit(); });
+            m.addSeparator();
+            m.addAction("🔍 Inspect", [this]() { handleInfo(); });
+            m.addAction("⚙️ UseFlags", [this]() { handleUseEdit(); });
+
+            m.addAction("🔓 Force Unmask (~amd64)", [this, pClean]() {
+                QString priorityKeywordsFile = "/etc/portage/package.accept_keywords/zzz_portager_keywords";
+                QProcess::execute("sudo mkdir -p /etc/portage/package.accept_keywords");
+                QString command = QString("echo '%1 ~amd64' | sudo tee -a %2").arg(pClean, priorityKeywordsFile);
+                QProcess::execute("bash", {"-c", command});
+                consoleOutput->append("<b style='color:#00ff00;'>[Automation] Manually unmasked " + pClean + "!</b>");
+            });
         }
         m.exec(pkgList->mapToGlobal(pos));
     }
