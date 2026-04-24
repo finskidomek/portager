@@ -15,3 +15,4 @@ install:
 	
 	# Kopiowanie pliku menu do /usr/share/applications
 	install -D -m 644 portager.desktop $(DESTDIR)$(PREFIX)/share/applications/portager.desktop
+     	install -D -m 644 background.png $(DESTDIR)$(PREFIX)/share/portager/background.png
