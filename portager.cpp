@@ -1,5 +1,3 @@
-// CZESC 1/4
-
 #include <QApplication>
 #include <QWidget>
 #include <QVBoxLayout>
@@ -23,7 +21,7 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QThread>
-#include <QScrollBar> // <--- TA LINIA ROZWIĄŻE BŁĄD
+#include <QScrollBar>
 
 class GentooManager : public QWidget {
 public:
@@ -63,8 +61,6 @@ public:
         topLayout->addWidget(aboutBtn);
         mainLayout->addLayout(topLayout);
 
-        // Usunąłem stąd pasek postępu oraz Timer!
-
         searchBar = new QLineEdit();
         searchBar->setPlaceholderText("Search packages...");
         searchBar->setStyleSheet("padding: 10px; background: #1e1e1e; border: 1px solid #00ffcc; color: white;");
@@ -77,7 +73,7 @@ public:
         listWithLegendLayout->setContentsMargins(0,0,0,0);
 
         pkgList = new QListWidget();
-        QString systemImgPath = "/usr/share/portager/background.png";
+        QString imgPath = "/usr/share/portager/background.png";
         pkgList->setStyleSheet(QString("QListWidget { background-image: url('%1'); background-repeat: no-repeat; background-position: center; background-attachment: fixed; background-color: #121212; color: #e0e0e0; border: 1px solid #333; }").arg(imgPath));
         pkgList->setSelectionMode(QAbstractItemView::ExtendedSelection);
         pkgList->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -110,10 +106,6 @@ public:
         consoleVLayout->setContentsMargins(0,0,0,0);
         consoleVLayout->setSpacing(0);
 
-
-
-// CZESC 2/4
-
         // Panel narzędziowy dla edytora (z przyciskiem SAVE)
         editorTools = new QWidget();
         auto *toolsLayout = new QHBoxLayout(editorTools);
@@ -123,7 +115,7 @@ public:
         toolsLayout->addWidget(new QLabel("<b style='color:#00ffcc;'>EDITOR MODE</b>"));
         toolsLayout->addStretch();
         toolsLayout->addWidget(saveFlagsBtn);
-        editorTools->setVisible(false); // Ukryty domyślnie
+        editorTools->setVisible(false);
         consoleVLayout->addWidget(editorTools);
 
         consoleOutput = new QTextEdit();
@@ -142,31 +134,17 @@ public:
         consoleInput->setStyleSheet("background-color: #050505; color: #00ffcc; border: 1px solid #333; font-family: monospace; padding: 5px; height: 30px;");
         bottomInputLayout->addWidget(consoleInput);
 
+        // --- NATYWNY PASEK POSTĘPU ---
         progressBar = new QProgressBar();
         progressBar->setVisible(false);
-        progressBar->setRange(0, 100);
-        progressBar->setAlignment(Qt::AlignCenter);
+        progressBar->setTextVisible(false);
         progressBar->setStyleSheet(
-            "QProgressBar { background-color: #050505; color: #ffffff; border: 1px solid #333; height: 30px; font-family: monospace; font-weight: bold; font-size: 11px; }"
+            "QProgressBar { background-color: #050505; border: 1px solid #333; height: 30px; }"
             "QProgressBar::chunk { background-color: #00ffcc; }"
         );
         bottomInputLayout->addWidget(progressBar);
 
         consoleVLayout->addWidget(bottomInputWrapper);
-
-        // --- TIMER DLA EFEKTU ODDYCHAJĄCEGO PASKA ---
-        pulseTimer = new QTimer(this);
-        pulseAngle = 0.0;
-        connect(pulseTimer, &QTimer::timeout, [this]() {
-            pulseAngle += 0.05; // Prędkość oddychania
-            if (pulseAngle > 2 * 3.14159) pulseAngle = 0;
-
-            // Funkcja sinus tworzy płynne przejście od 0 do 100 i z powrotem
-            double factor = (std::sin(pulseAngle) + 1.0) / 2.0;
-            int val = static_cast<int>(factor * 100);
-            progressBar->setValue(val);
-        });
-        // ---------------------------------------------
 
         splitter->addWidget(consoleWrapper);
         splitter->setStretchFactor(0, 1);
@@ -245,8 +223,6 @@ public:
             }
         });
 
- // CZESC 3/4
-
         connect(searchBar, &QLineEdit::textChanged, this, &GentooManager::handleSearch);
         connect(syncBtn, &QPushButton::clicked, this, &GentooManager::handleSync);
         connect(globalUpdateBtn, &QPushButton::clicked, [this]() { startEmerge("-avuDU --with-bdeps=y @world"); });
@@ -260,8 +236,8 @@ public:
         connect(installProcess, &QProcess::readyReadStandardError, this, &GentooManager::readInstallOutput);
 
         connect(installProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [this](int exitCode) {
-            // STOPUJEMY ODDYCHANIE
-            pulseTimer->stop();
+            progressBar->setRange(0, 100);
+            progressBar->setValue(0);
             progressBar->setVisible(false);
             consoleInput->setVisible(true);
             consoleInput->setFocus();
@@ -283,8 +259,6 @@ private:
     QString terminal; QListWidget *pkgList; QLineEdit *searchBar; QTextEdit *consoleOutput;
     QLineEdit *consoleInput; QLabel *statsLabel, *selectionLabel, *legendHeader;
     QProgressBar *progressBar;
-    QTimer *pulseTimer; // Nowy timer
-    double pulseAngle;  // Nowa zmienna
     QPushButton *syncBtn, *globalUpdateBtn, *topCleanBtn, *etcUpBtn, *ovlBtn;
     QPushButton *installBtn, *reinstallBtn, *uninstallBtn, *useBtn, *infoBtn, *saveFlagsBtn;
     QPushButton *confirmBtn, *cancelBtn; QWidget *confirmWidget, *legendItemsWidget, *legendContainer, *editorTools;
@@ -374,8 +348,6 @@ private:
             }
         } else { handleSearch(searchBar->text()); }
     }
-
-// CZESC 4/4
 
     void handleOverlayAction() {
         auto sel = pkgList->selectedItems(); if (sel.isEmpty()) return;
@@ -520,9 +492,7 @@ private:
         consoleInput->setVisible(false);
         progressBar->setVisible(true);
 
-        // ODPALAMY ODDYCHANIE
-        pulseAngle = 0.0;
-        pulseTimer->start(20); // Aktualizacja co 20 ms dla płynności
+        progressBar->setRange(0, 0);
 
         consoleOutput->append("<b style='color:#00ffcc;'>[System] Forcing manual sync...</b>");
 
@@ -542,9 +512,7 @@ private:
         consoleInput->setVisible(false);
         progressBar->setVisible(true);
 
-        // ODPALAMY ODDYCHANIE
-        pulseAngle = 0.0;
-        pulseTimer->start(20); // Aktualizacja co 20 ms dla płynności
+        progressBar->setRange(0, 0);
 
         QString autoUnmaskFlags = "--autounmask=y --autounmask-write=y --autounmask-continue=y";
 
@@ -573,8 +541,7 @@ private:
 
         if (t.contains("[Yes/No]")) {
             confirmWidget->setVisible(true);
-            // Na czas decyzji stopujemy oddychanie i wypełniamy pasek
-            pulseTimer->stop();
+            progressBar->setRange(0, 100);
             progressBar->setValue(100);
         }
         consoleOutput->ensureCursorVisible();
@@ -597,7 +564,7 @@ private:
         consoleOutput->append(QString::fromLocal8Bit(jP.readAllStandardOutput()).trimmed());
     }
 
-    void showContextMenu(const QPoint &pos) {
+       void showContextMenu(const QPoint &pos) {
         auto sel = pkgList->selectedItems(); if (sel.isEmpty()) return;
         QMenu m(this); m.setStyleSheet("QMenu { background:#222; color:#fff; } QMenu::item:selected { background:#00ffcc; color:#000; }");
         if (isOverlayMode) {
