@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Version=2.6
+Version=1.0
 Name=Portager
 Comment=Gentoo Portage Menager
 Exec=portager
