@@ -1,3 +1,5 @@
+//czesc 1/5
+
 #include <QApplication>
 #include <QWidget>
 #include <QVBoxLayout>
@@ -22,6 +24,7 @@
 #include <QDateTime>
 #include <QThread>
 #include <QScrollBar>
+#include <QDialog>
 
 class GentooManager : public QWidget {
 public:
@@ -142,6 +145,8 @@ public:
             "QProgressBar { background-color: #050505; border: 1px solid #333; height: 30px; }"
             "QProgressBar::chunk { background-color: #00ffcc; }"
         );
+
+
         bottomInputLayout->addWidget(progressBar);
 
         consoleVLayout->addWidget(bottomInputWrapper);
@@ -180,9 +185,65 @@ public:
 
         installProcess = new QProcess(this);
 
+
+//czesc 2/5
+
         // --- SIGNALS ---
         connect(aboutBtn, &QPushButton::clicked, [this]() {
-            QMessageBox::about(this, "About Portager", "<h2>Portager v2.5</h2><p>You are Terminal-free ;) </p><hr><p style='color:#ff5555;'><b>🚩 ATTENTION:</b> Use with caution.</p>");
+            QDialog *aboutDialog = new QDialog(this);
+            aboutDialog->setWindowTitle("About Portager");
+            aboutDialog->setStyleSheet("background-color: #1a1a1a; color: #e0e0e0;");
+            aboutDialog->setMinimumWidth(400);
+
+            auto *aboutLayout = new QVBoxLayout(aboutDialog);
+
+            QLabel *titleLabel = new QLabel("<h2>Portager v2.5</h2><p>You are Terminal-free ;)</p>");
+            titleLabel->setAlignment(Qt::AlignCenter);
+            aboutLayout->addWidget(titleLabel);
+
+            QLabel *authorLabel = new QLabel("<p style='font-size: 13px;'>Author: <b>Koszmar</b></p>");
+            authorLabel->setAlignment(Qt::AlignCenter);
+            aboutLayout->addWidget(authorLabel);
+
+            QLabel *warnLabel = new QLabel(
+                "<p style='color:#ff3333; font-weight: bold; font-size: 13px;'>"
+                "🚩 ATTENTION: This is a development version!<br>"
+                "Use this application at your own risk. The author takes "
+                "no responsibility for any eventual data loss or system damage.</p>"
+            );
+            warnLabel->setWordWrap(true);
+            warnLabel->setAlignment(Qt::AlignCenter);
+            warnLabel->setStyleSheet("border: 1px solid #ff3333; padding: 8px; background: #2a1010; border-radius: 5px;");
+            aboutLayout->addWidget(warnLabel);
+
+            QLabel *donateLabel = new QLabel(
+                "<p style='margin-top: 10px;'>If you like this app, you can support the author's work:<br>"
+                "<a style='color: #00ffcc;' href='https://buycoffee.to/koszmar'>buycoffee.to/koszmar</a></p>"
+            );
+            donateLabel->setOpenExternalLinks(true);
+            donateLabel->setAlignment(Qt::AlignCenter);
+            aboutLayout->addWidget(donateLabel);
+
+            QString qrPath = "/usr/share/portager/qrcode.png";
+            if (QFile::exists(qrPath)) {
+                QLabel *qrLabel = new QLabel();
+                QPixmap qrPixmap(qrPath);
+                qrLabel->setPixmap(qrPixmap.scaled(180, 180, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                qrLabel->setAlignment(Qt::AlignCenter);
+                qrLabel->setStyleSheet("margin-top: 10px; background: white; padding: 5px; border-radius: 3px;");
+                aboutLayout->addWidget(qrLabel);
+            } else {
+                QLabel *noQrLabel = new QLabel("<p style='color: #888;'>[QR Code not available - file missing]</p>");
+                noQrLabel->setAlignment(Qt::AlignCenter);
+                aboutLayout->addWidget(noQrLabel);
+            }
+
+            auto *closeBtn = new QPushButton("Close");
+            closeBtn->setStyleSheet("background-color: #333; color: white; font-weight: bold; padding: 5px;");
+            connect(closeBtn, &QPushButton::clicked, aboutDialog, &QDialog::accept);
+            aboutLayout->addWidget(closeBtn);
+
+            aboutDialog->exec();
         });
 
         connect(consoleInput, &QLineEdit::returnPressed, [this]() {
@@ -304,6 +365,8 @@ private:
         }
     }
 
+//czesc 3/5
+
     void saveUseFlags() {
         QString content = consoleOutput->toPlainText();
         QString priorityFile = "/etc/portage/package.use/zzz_portager_use";
@@ -417,7 +480,7 @@ private:
             }
         }
     }
-
+//czesc 4/5
     void checkUpdates() {
         globalUpdateBtn->setEnabled(false);
         topCleanBtn->setEnabled(false);
@@ -518,6 +581,8 @@ private:
 
         installProcess->start("script", {"-q", "-c", "sudo emerge --color=y " + autoUnmaskFlags + " " + f + " " + p, "/dev/null"});
     }
+
+//czesc 5/5
 
     void readInstallOutput() {
         QByteArray d = installProcess->readAllStandardOutput() + installProcess->readAllStandardError();

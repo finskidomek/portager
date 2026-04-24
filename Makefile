@@ -11,3 +11,4 @@ install:
 	install -D -m 644 portager.png $(DESTDIR)$(PREFIX)/share/pixmaps/portager.png
 	install -D -m 644 portager.desktop $(DESTDIR)$(PREFIX)/share/applications/portager.desktop
 	install -D -m 644 background.png $(DESTDIR)$(PREFIX)/share/portager/background.png
+        install -D -m 644 qrcode.png $(DESTDIR)$(PREFIX)/share/portager/qrcode.png
