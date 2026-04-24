@@ -7,12 +7,7 @@ all:
 	$(CXX) $(CXXFLAGS) portager.cpp -o portager $(LDFLAGS)
 
 install:
-	# Kopiowanie programu do /usr/bin
 	install -D -m 755 portager $(DESTDIR)$(PREFIX)/bin/portager
-	
-	# Kopiowanie ikony do /usr/share/pixmaps (stąd systemy zawsze ją odczytają)
 	install -D -m 644 portager.png $(DESTDIR)$(PREFIX)/share/pixmaps/portager.png
-	
-	# Kopiowanie pliku menu do /usr/share/applications
 	install -D -m 644 portager.desktop $(DESTDIR)$(PREFIX)/share/applications/portager.desktop
-     	install -D -m 644 background.png $(DESTDIR)$(PREFIX)/share/portager/background.png
+	install -D -m 644 background.png $(DESTDIR)$(PREFIX)/share/portager/background.png
