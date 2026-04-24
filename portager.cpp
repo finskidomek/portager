@@ -77,7 +77,7 @@ public:
         listWithLegendLayout->setContentsMargins(0,0,0,0);
 
         pkgList = new QListWidget();
-        QString imgPath = QDir::homePath() + "/.config/portager/background.png";
+        QString systemImgPath = "/usr/share/portager/background.png";
         pkgList->setStyleSheet(QString("QListWidget { background-image: url('%1'); background-repeat: no-repeat; background-position: center; background-attachment: fixed; background-color: #121212; color: #e0e0e0; border: 1px solid #333; }").arg(imgPath));
         pkgList->setSelectionMode(QAbstractItemView::ExtendedSelection);
         pkgList->setContextMenuPolicy(Qt::CustomContextMenu);
