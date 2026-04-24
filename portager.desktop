@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=2.6
+Name=Portager
+Comment=Gentoo Portage Menager
+Exec=portager
+Icon=portager
+Terminal=false
+Categories=Utility;System;
