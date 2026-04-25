@@ -224,7 +224,7 @@ public:
 
             QLabel *donateLabel = new QLabel(
                 "<p style='margin-top: 10px;'>If you like this app, you can support the author's work:<br>"
-                "<a style='color: #00ffcc;' href='https://buycoffee.to'>buycoffee.to/koszmar</a></p>"
+                "<a style='color: #00ffcc;' href='https://buycoffee.to/koszmar'>buycoffee.to/koszmar</a></p>"
             );
             donateLabel->setOpenExternalLinks(true);
             donateLabel->setAlignment(Qt::AlignCenter);
