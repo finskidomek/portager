@@ -1,4 +1,0 @@
-1 zasada - witaj  wkleje ci kod cpp to jest moja aplikacja pod system gentoo linux do zadzadzaniem pkietami ulatwiajaca nowym uyztkownikom korzystanie z portage w latwy sposob chce zebys mi pomgl z paroma rzeczmi jestes ekspertem w programownaiu bedzie po kolei od czesci 1/5 ....5/5 jak wklje calosc
- dopiero przanalizujesz caly kod i pozniej powiem ci co zmienimy aha i nie zmieniaj nic bez mojej zgody nie upraszczaj ok?
-2 zasad -ok teraz zasda jest tak jak bedziemy cos zmieniac
- i np bedzie cos do zmiany w kodzi to bedziesz mi podawac calos czesci np. jesli zmian jest w czesci 1/5 i 3/5 to dajesz mi cale czesci 1/5 i 3/5 ok rozumiesz zasady ?
