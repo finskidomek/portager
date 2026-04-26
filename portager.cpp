@@ -32,7 +32,6 @@
 #include <cstdlib>
 
 class GentooManager : public QWidget {
-    // --- DEKLARACJE ZMIENNYCH (Przeniesione tutaj, by konstruktor je widział) ---
 private:
     QString terminal; QListWidget *pkgList; QLineEdit *searchBar; QTextEdit *consoleOutput;
     QLabel *statsLabel, *selectionLabel, *legendHeader;
@@ -45,12 +44,14 @@ private:
 
     bool isOverlayMode = false;
     bool isPurgeMode = false;
+    bool statusBlinkState = false;
     QString currentAction = "IDLE";
     QString kernelVer;
     QString gccVer;
     QString clangVer;
     int totalAvailable = 0;
     QTimer *aboutPulseTimer;
+    QTimer *statusBlinkTimer;
 
 public:
     GentooManager(QWidget *parent = nullptr) : QWidget(parent) {
@@ -140,20 +141,42 @@ public:
 
         mainSplitter->addWidget(centerContainer);
 
+        // --- RIGHT PANEL (PKG INFO) ---
         legendContainer = new QWidget();
         legendContainer->setFixedWidth(250);
         legendContainer->setStyleSheet("background: #1a1a1a; border-left: 1px solid #333;");
         auto *legendLayout = new QVBoxLayout(legendContainer);
         legendLayout->setAlignment(Qt::AlignTop);
+
         legendHeader = new QLabel("PKG INFO");
         legendHeader->setStyleSheet("color: #00ffcc; font-weight: bold; font-size: 11px; margin-bottom: 8px;");
         legendHeader->setAlignment(Qt::AlignCenter);
         legendLayout->addWidget(legendHeader);
+
         legendItemsWidget = new QWidget();
         legendItemsLayout = new QVBoxLayout(legendItemsWidget);
         legendItemsLayout->setContentsMargins(5,0,5,0);
         legendLayout->addWidget(legendItemsWidget);
+
         legendLayout->addStretch();
+
+        // --- HUMOROUS DONATE SECTION WITH LINK ---
+        QLabel *donateText = new QLabel("<a href='https://buycoffee.to/koszmar' style='color: #888; text-decoration: none;'>Support me in the uneven fight with... ;)</a>");
+        donateText->setStyleSheet("font-size: 11px; font-style: italic;");
+        donateText->setWordWrap(true);
+        donateText->setOpenExternalLinks(true); // To pozwala na otwarcie przeglądarki
+        donateText->setAlignment(Qt::AlignCenter);
+        legendLayout->addWidget(donateText);
+
+        QString qrPath = "/usr/share/portager/qrcode.png";
+        if (QFile::exists(qrPath)) {
+            QLabel *qrLabel = new QLabel();
+            qrLabel->setPixmap(QPixmap(qrPath).scaled(140, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            qrLabel->setAlignment(Qt::AlignCenter);
+            qrLabel->setStyleSheet("margin-bottom: 10px; border: 1px solid #333; padding: 5px; background: #fff;");
+            legendLayout->addWidget(qrLabel);
+        }
+
         mainSplitter->addWidget(legendContainer);
         mainLayout->addWidget(mainSplitter);
 
@@ -182,19 +205,28 @@ public:
             QDialog *aboutDialog = new QDialog(this);
             aboutDialog->setWindowTitle("About Portager");
             aboutDialog->setStyleSheet("background-color: #1a1a1a; color: #e0e0e0;");
-            aboutDialog->setMinimumWidth(400);
+            aboutDialog->setMinimumWidth(450);
             auto *aboutLayout = new QVBoxLayout(aboutDialog);
-            QLabel *titleLabel = new QLabel("<h2>Portager v2.5</h2><p>You are Terminal-free ;)</p>");
+
+            QLabel *titleLabel = new QLabel("<h2>Portager v9999</h2><p>You are Terminal-free ;)</p>");
             titleLabel->setAlignment(Qt::AlignCenter);
             aboutLayout->addWidget(titleLabel);
+
             QLabel *authorLabel = new QLabel("<p style='font-size: 13px;'>Author: <b>Koszmar</b></p>");
             authorLabel->setAlignment(Qt::AlignCenter);
             aboutLayout->addWidget(authorLabel);
+
+            // --- TWOJA NOWA SEKCJA (ZACHOWUJĄC RESZTĘ) ---
+            QLabel *contactLabel = new QLabel("<p style='margin-top: 5px; color: #00ffcc;'>Suggestion or bug? Report it here:<br><b>finskidomek@gmail.com</b></p>");
+            contactLabel->setAlignment(Qt::AlignCenter);
+            aboutLayout->addWidget(contactLabel);
+
             QLabel *warnLabel = new QLabel("<p style='color:#ff3333; font-weight: bold; font-size: 13px;'>🚩 ATTENTION: This is a development version!<br>Use this application at your own risk. The author takes no responsibility for any eventual data loss or system damage.</p>");
             warnLabel->setWordWrap(true);
             warnLabel->setAlignment(Qt::AlignCenter);
-            warnLabel->setStyleSheet("border: 1px solid #ff3333; padding: 8px; background: #2a1010; border-radius: 5px;");
+            warnLabel->setStyleSheet("border: 1px solid #ff3333; padding: 8px; background: #2a1010; border-radius: 5px; margin-top: 10px;");
             aboutLayout->addWidget(warnLabel);
+
             QLabel *donateLabel = new QLabel("<p style='margin-top: 10px;'>If you like this app, you can support the author's work:<br><a style='color: #00ffcc;' href='https://buycoffee.to/koszmar'>buycoffee.to/koszmar</a></p>");
             donateLabel->setOpenExternalLinks(true);
             donateLabel->setAlignment(Qt::AlignCenter);
@@ -229,9 +261,21 @@ public:
             }
             glitch = !glitch;
         });
+        aboutPulseTimer->start(6000);
+
+        statusBlinkTimer = new QTimer(this);
+        connect(statusBlinkTimer, &QTimer::timeout, [this]() {
+            if (currentAction != "IDLE") {
+                this->statusBlinkState = !this->statusBlinkState;
+                updateLegend(isOverlayMode);
+            } else if (statusBlinkState) {
+                this->statusBlinkState = false;
+                updateLegend(isOverlayMode);
+            }
+        });
+        statusBlinkTimer->start(500);
 
         std::srand(static_cast<unsigned int>(std::time(nullptr)));
-        aboutPulseTimer->start(6000);
 
         connect(saveFlagsBtn, &QPushButton::clicked, this, &GentooManager::saveUseFlags);
         connect(cancelUseBtn, &QPushButton::clicked, [this]() {
@@ -261,6 +305,7 @@ public:
                 return;
             }
             currentAction = "IDLE";
+            this->statusBlinkState = false;
             if (exitCode == 0 && !isPurgeMode) {
                 consoleOutput->setVisible(false);
                 pkgList->setVisible(true);
@@ -282,6 +327,16 @@ public:
         connect(uninstallBtn, &QPushButton::clicked, [this]() { handleSecureRemove(); });
         connect(useBtn, &QPushButton::clicked, this, &GentooManager::handleUseEdit);
         connect(pkgList, &QListWidget::customContextMenuRequested, [this](const QPoint &pos) { this->showContextMenu(pos); });
+
+        connect(pkgList, &QListWidget::itemSelectionChanged, [this]() {
+            bool hasSelection = !pkgList->selectedItems().isEmpty();
+            selectionLabel->setText(QString("Selected: %1").arg(pkgList->selectedItems().size()));
+            installBtn->setEnabled(hasSelection || isOverlayMode);
+            reinstallBtn->setEnabled(hasSelection && !isOverlayMode);
+            useBtn->setEnabled(hasSelection && !isOverlayMode);
+            uninstallBtn->setEnabled(hasSelection && !isOverlayMode);
+            infoBtn->setEnabled(hasSelection && !isOverlayMode);
+        });
 
         connect(installProcess, &QProcess::readyReadStandardOutput, this, &GentooManager::readInstallOutput);
         connect(installProcess, &QProcess::readyReadStandardError, this, &GentooManager::readInstallOutput);
@@ -319,16 +374,22 @@ public:
             auto *h = new QLabel(QString("<span style='color:%1; font-weight:%2;'>%3</span>").arg(c, bold ? "bold" : "normal", t));
             legendItemsLayout->addWidget(h);
         };
-        addLeg("#00ffcc", "STATUS: " + currentAction, true);
+
+        QString statusColor;
+        if (currentAction == "IDLE") { statusColor = "#ffff00"; }
+        else { statusColor = statusBlinkState ? "#ff4444" : "#220000"; }
+        addLeg(statusColor, "STATUS: " + currentAction, true);
+
         legendItemsLayout->addSpacing(10);
         addLeg("#888", "OS: Gentoo Linux");
         addLeg("#888", "Kernel: " + kernelVer);
         addLeg("#888", "GCC: " + gccVer);
         addLeg("#888", "Clang: " + clangVer);
         addLeg("#00ffcc", QString("Installed: %1").arg(localPkgs.size()), true);
-        addLeg("#fb8c00", QString("Updatable: %1").arg(updatablePkgs.size()), true);
+        addLeg("#00ff00", QString("Updatable: %1").arg(updatablePkgs.size()), true);
         addLeg("#555", QString("Repo size: %1").arg(totalAvailable));
     }
+
 
 //czesc 3/5
 
