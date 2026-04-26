@@ -18,6 +18,12 @@ To break the barrier. To show the world that anyone can use Gentoo and enjoy bui
 
 ## 🚀 Installation
 
+### Prerequisites
+Make sure you have Qt6 and eix installed:
+```bash
+sudo emerge dev-qt/qtbase:6 app-portage/eix app-portage/gentoolkit
+
+
 ### Option 1: Via Gentoo Overlay (Recommended)
 You can easily add my repository to your system:
 
@@ -36,6 +42,7 @@ cd portager
 make
 sudo make install
 ```
+![Portager Screenshot](portager_shot.png)
 
 ---
 
