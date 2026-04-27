@@ -1,12 +1,12 @@
-# 🚀 Portager - You are Terminal-free!
+# 🚀 GreenPort - You are Terminal-free!
 
 I absolutely **love Gentoo Linux**. It is one of the most powerful, flexible, and truly amazing operating systems in the world.
 
 But it hurts me deeply that such an incredible system is often seen as "only for the elite" or "too difficult for normal people." I was a total newbie to Gentoo myself, and I felt that pain. I didn't want the fear of the terminal or complex Portage commands to stop passionate users from experiencing the freedom of Gentoo.
 
-So, I decided to do something about it. I created **Portager**.
+So, I decided to do something about it. I created **GreenPort**.
 
-Portager is a graphical package manager designed by a newbie, for newbies (and anyone who wants to save some time!). It combines the raw power of Portage with a clean, easy-to-use interface. No more fighting with manual use-flag edits or getting lost in deep dependency trees!
+GreenPort is a graphical package manager designed by a newbie, for newbies (and anyone who wants to save some time!). It combines the raw power of Portage with a clean, easy-to-use interface. No more fighting with manual use-flag edits or getting lost in deep dependency trees!
 
 ## 💔 The Problem
 * Gentoo is amazing, but the learning curve can be brutal.
@@ -42,12 +42,12 @@ cd portager
 make
 sudo make install
 ```
-![Portager Screenshot](portager_shot.png)
+![GreenPort Screenshot](portager_shot.png)
 
 ---
 
 ### ☕ Support the Project
-This project is developed with love. If Portager made your Gentoo journey a little easier and you like my work, please consider buying me a coffee:
+This project is developed with love. If GreenPort made your Gentoo journey a little easier and you like my work, please consider buying me a coffee:
 👉 **[buycoffee.to/koszmar](https://buycoffee.to/koszmar)**
 
 ### 🚩 Disclaimer
